@@ -18,7 +18,6 @@ if (isset($_POST['update'])) {
         'match_existing_by_email'    => (int) ($_POST['match_existing_by_email'] ?? 0),
         'sync_profile_on_login'      => (int) ($_POST['sync_profile_on_login'] ?? 0),
         'button_label'               => trim((string) ($_POST['button_label'] ?? '')),
-        'license_api_url'            => rtrim(trim((string) ($_POST['license_api_url'] ?? '')), '/'),
         'license_key'                => trim((string) ($_POST['license_key'] ?? '')),
     ];
 
@@ -175,11 +174,6 @@ echo '</table>';
 
 echo '<h4 class="mt-3">' . __('Licenciamento', 'entrasso') . '</h4>';
 echo '<table class="table">';
-
-echo '<tr><td>' . __('URL do painel de licenciamento', 'entrasso') . '</td><td>';
-echo Html::input('license_api_url', ['value' => $config['license_api_url'], 'size' => 50, 'placeholder' => 'https://painel.suaempresa.com.br']);
-echo '<div class="form-text">' . __('Só a URL base do painel, sem caminho no final.', 'entrasso') . '</div>';
-echo '</td></tr>';
 
 echo '<tr><td>' . __('Chave da licença', 'entrasso') . '</td><td>';
 echo Html::input('license_key', ['value' => $config['license_key'], 'size' => 50]);
