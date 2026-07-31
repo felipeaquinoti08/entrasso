@@ -18,6 +18,8 @@ if (isset($_POST['update'])) {
         'match_existing_by_email'    => (int) ($_POST['match_existing_by_email'] ?? 0),
         'sync_profile_on_login'      => (int) ($_POST['sync_profile_on_login'] ?? 0),
         'button_label'               => trim((string) ($_POST['button_label'] ?? '')),
+        'license_api_url'            => rtrim(trim((string) ($_POST['license_api_url'] ?? '')), '/'),
+        'license_key'                => trim((string) ($_POST['license_key'] ?? '')),
     ];
 
     // Only overwrite the stored secret if a new one was actually typed -
@@ -167,6 +169,42 @@ Dropdown::showYesNo('sync_profile_on_login', $config['sync_profile_on_login']);
 echo '<div class="form-text">' .
     __('Atualiza esses campos a cada login com o que estiver no perfil Microsoft 365 da pessoa - inclusive sobrescrevendo edições manuais feitas no GLPI. Cargo e Localidade são criados automaticamente se ainda não existirem (igual à sincronização LDAP). Usa a permissão "User.Read" do Microsoft Graph, já habilitada por padrão em qualquer app registrado.', 'entrasso') .
     '</div>';
+echo '</td></tr>';
+
+echo '</table>';
+
+echo '<h4 class="mt-3">' . __('Licenciamento', 'entrasso') . '</h4>';
+echo '<table class="table">';
+
+echo '<tr><td>' . __('URL do painel de licenciamento', 'entrasso') . '</td><td>';
+echo Html::input('license_api_url', ['value' => $config['license_api_url'], 'size' => 50, 'placeholder' => 'https://painel.suaempresa.com.br']);
+echo '<div class="form-text">' . __('Só a URL base do painel, sem caminho no final.', 'entrasso') . '</div>';
+echo '</td></tr>';
+
+echo '<tr><td>' . __('Chave da licença', 'entrasso') . '</td><td>';
+echo Html::input('license_key', ['value' => $config['license_key'], 'size' => 50]);
+echo '</td></tr>';
+
+if ($config['license_instance_id'] !== '') {
+    echo '<tr><td>' . __('Identificador desta instalação', 'entrasso') . '</td><td>';
+    echo entrasso_copy_field('entrasso-instance-id', $config['license_instance_id']);
+    echo '<div class="form-text">' . __('Gerado automaticamente no primeiro check-in. É o que o painel conta contra a quantidade contratada - não muda depois.', 'entrasso') . '</div>';
+    echo '</td></tr>';
+}
+
+echo '<tr><td>' . __('Última verificação', 'entrasso') . '</td><td>';
+if ($config['license_last_checked_at'] !== '') {
+    $status_labels = [
+        'ok' => '<span class="badge bg-success">' . __('OK', 'entrasso') . '</span>',
+        'unreachable' => '<span class="badge bg-warning">' . __('Painel inacessível', 'entrasso') . '</span>',
+        'error' => '<span class="badge bg-warning">' . __('Erro na verificação', 'entrasso') . '</span>',
+    ];
+    echo $status_labels[$config['license_last_status']] ?? ('<span class="badge bg-danger">' . htmlspecialchars($config['license_last_status']) . '</span>');
+    echo ' - ' . Html::convDateTime($config['license_last_checked_at']);
+} else {
+    echo '<span class="text-muted">' . __('Ainda não verificado', 'entrasso') . '</span>';
+}
+echo '<div class="form-text">' . __('Verificado automaticamente a cada 10 minutos (tarefa agendada "CheckIn"). Uma recusa definitiva do painel (chave inválida, expirada, suspensa ou limite de instalações atingido) desativa o login Microsoft automaticamente até ser resolvido - problemas de rede não desativam.', 'entrasso') . '</div>';
 echo '</td></tr>';
 
 echo '</table>';

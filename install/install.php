@@ -30,5 +30,15 @@ function plugin_entrasso_install_run(): bool
 
     $migration->executeMigration();
 
+    CronTask::register(
+        \GlpiPlugin\Entrasso\LicenseCheck::class,
+        'CheckIn',
+        10 * MINUTE_TIMESTAMP,
+        [
+            'comment' => 'Valida a licença do Entrasso junto ao painel de licenciamento.',
+            'mode' => CronTask::MODE_EXTERNAL,
+        ]
+    );
+
     return true;
 }
