@@ -1,14 +1,14 @@
 # Entrasso
 
-Plugin para **GLPI 11** que adiciona login SSO com **Microsoft Entra ID** (Azure AD) — de graça, sem depender de plugins pagos, reaproveitando bibliotecas que já vêm dentro do próprio GLPI.
+Plugin para **GLPI 11**, desenvolvido pela CCITI, que adiciona login SSO com **Microsoft Entra ID** (Azure AD), reaproveitando bibliotecas que já vêm dentro do próprio GLPI.
 
-> Requer GLPI `>= 11.0.0`. Licença GPL-3.0-or-later.
+> Requer GLPI `>= 11.0.0`. Software proprietário — uso mediante licenciamento CCITI.
 
 ---
 
 ## O que o plugin resolve
 
-Soluções de SSO com Microsoft Entra ID para GLPI, no mercado de plugins, costumam ser pagas. O Entrasso entrega a mesma coisa reaproveitando a biblioteca `thenetworg/oauth2-azure` (provider Azure para o `league/oauth2-client`), que já está no `vendor/` do próprio GLPI — hoje usada só para SMTP de saída via Microsoft Graph, nunca para login. Nenhuma dependência nova.
+O Entrasso entrega SSO com Microsoft Entra ID reaproveitando a biblioteca `thenetworg/oauth2-azure` (provider Azure para o `league/oauth2-client`), que já está no `vendor/` do próprio GLPI — hoje usada só para SMTP de saída via Microsoft Graph, nunca para login. Nenhuma dependência nova.
 
 Ao logar com a conta Microsoft, se não existir um usuário correspondente no GLPI, um é criado automaticamente — mantendo histórico real (ações atribuídas a uma pessoa de verdade).
 

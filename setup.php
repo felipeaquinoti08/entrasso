@@ -15,7 +15,7 @@ function plugin_version_entrasso(): array
         'name'         => 'Entrasso',
         'version'      => PLUGIN_ENTRASSO_VERSION,
         'author'       => 'Felipe Aquino',
-        'license'      => 'GPL-3.0-or-later',
+        'license'      => 'Proprietary',
         'requirements' => [
             'glpi' => [
                 'min' => PLUGIN_ENTRASSO_MIN_GLPI_VERSION,
