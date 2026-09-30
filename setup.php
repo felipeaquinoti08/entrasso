@@ -5,7 +5,7 @@ use Glpi\Plugin\Hooks;
 use GlpiPlugin\Entrasso\LoginButton;
 use GlpiPlugin\Entrasso\UserAccount;
 
-define('PLUGIN_ENTRASSO_VERSION', '1.0.0');
+define('PLUGIN_ENTRASSO_VERSION', '1.1.0');
 define('PLUGIN_ENTRASSO_MIN_GLPI_VERSION', '11.0.0');
 define('PLUGIN_ENTRASSO_MAX_GLPI_VERSION', '11.9.99');
 
@@ -15,7 +15,8 @@ function plugin_version_entrasso(): array
         'name'         => 'Entrasso',
         'version'      => PLUGIN_ENTRASSO_VERSION,
         'author'       => 'Felipe Aquino',
-        'license'      => 'Proprietary',
+        'license'      => 'GPL-3.0-or-later',
+        'homepage'     => 'https://github.com/felipeaquinoti08/entrasso',
         'requirements' => [
             'glpi' => [
                 'min' => PLUGIN_ENTRASSO_MIN_GLPI_VERSION,
