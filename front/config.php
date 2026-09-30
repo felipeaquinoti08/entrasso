@@ -2,10 +2,13 @@
 
 use GlpiPlugin\Entrasso\Config;
 use GlpiPlugin\Entrasso\OAuthClient;
+use GlpiPlugin\Entrasso\Ui;
 
 Session::checkRight('config', UPDATE);
 
 global $CFG_GLPI;
+
+$self_url = $CFG_GLPI['root_doc'] . '/plugins/entrasso/front/config.php';
 
 if (isset($_POST['update'])) {
     $values = [
@@ -18,7 +21,6 @@ if (isset($_POST['update'])) {
         'match_existing_by_email'    => (int) ($_POST['match_existing_by_email'] ?? 0),
         'sync_profile_on_login'      => (int) ($_POST['sync_profile_on_login'] ?? 0),
         'button_label'               => trim((string) ($_POST['button_label'] ?? '')),
-        'license_key'                => trim((string) ($_POST['license_key'] ?? '')),
     ];
 
     // Only overwrite the stored secret if a new one was actually typed -
@@ -30,182 +32,133 @@ if (isset($_POST['update'])) {
 
     Config::set($values);
     Session::addMessageAfterRedirect(__('Configuração salva com sucesso.', 'entrasso'));
-    Html::redirect($CFG_GLPI['root_doc'] . '/plugins/entrasso/front/config.php');
+    Html::redirect($self_url);
 }
 
 $config = Config::get();
 $redirect_uri = OAuthClient::getRedirectUri();
 $app_name = 'GLPI SSO - ' . (parse_url((string) ($CFG_GLPI['url_base'] ?? ''), PHP_URL_HOST) ?: 'GLPI');
+$is_https = str_starts_with($redirect_uri, 'https://');
+$is_configured = Config::isConfigured();
+$is_active = (bool) $config['is_active'];
 
-Html::header(__('Entrasso', 'entrasso'));
+Html::header(__('Entrasso', 'entrasso'), $_SERVER['PHP_SELF'], 'config', 'plugin');
 
-/**
- * Small "copy to clipboard" button next to a value the admin needs to
- * paste into the Azure Portal - avoids retyping (and mistyping) the
- * redirect URI by hand.
- */
-function entrasso_copy_field(string $id, string $value): string
-{
-    $html = '<code id="' . $id . '">' . htmlspecialchars($value) . '</code> ';
-    $html .= '<button type="button" class="btn btn-sm btn-outline-secondary entrasso-copy-btn" data-target="' . $id . '">';
-    $html .= '<i class="ti ti-copy"></i> ' . __('Copiar', 'entrasso');
-    $html .= '</button>';
-    return $html;
+// ---------------------------------------------------------------------------
+// Overview
+// ---------------------------------------------------------------------------
+
+if ($is_active && $is_configured) {
+    $overall = Ui::status('ok', __('Login Microsoft ativo', 'entrasso'));
+} elseif ($is_active) {
+    $overall = Ui::status('warn', __('Ativo, mas falta configurar', 'entrasso'));
+} else {
+    $overall = Ui::status('off', __('Login Microsoft desativado', 'entrasso'));
 }
 
-echo '<div class="card m-3">';
-echo '<div class="card-body">';
-echo '<h3>' . __('Configurar aplicativo no Microsoft 365', 'entrasso') . '</h3>';
-echo '<p class="text-muted">' .
-    __('Siga estes passos no Portal do Azure, logado como Administrador Global (Global Admin) do tenant:', 'entrasso') .
-    '</p>';
+echo Ui::pageStart(
+    'ti-brand-windows',
+    __('Entrasso - Login com Microsoft', 'entrasso'),
+    __('Login único (SSO) com Microsoft Entra ID, com criação e sincronização automática de usuários.', 'entrasso'),
+    $overall,
+    'ent-has-savebar'
+);
 
-echo '<ol>';
-echo '<li>' . __('Clique em "Abrir Portal do Azure" abaixo (abre em nova aba) e depois em "Novo registro".', 'entrasso') . '</li>';
-echo '<li>' . sprintf(__('Em "Nome", cole: %s', 'entrasso'), entrasso_copy_field('entrasso-app-name', $app_name)) . '</li>';
-echo '<li>' . __('Em "Tipos de conta com suporte", selecione "Somente contas neste diretório organizacional" (single-tenant).', 'entrasso') . '</li>';
-echo '<li>' . sprintf(
-    __('Em "URI de redirecionamento", escolha o tipo "Web" e cole: %s', 'entrasso'),
-    entrasso_copy_field('entrasso-redirect-uri', $redirect_uri)
-) . '</li>';
-echo '<li>' . __('Clique em "Registrar".', 'entrasso') . '</li>';
-echo '<li>' . __('Na página de visão geral do aplicativo criado, copie o "Application (client) ID" e o "Directory (tenant) ID" - cole nos campos correspondentes abaixo.', 'entrasso') . '</li>';
-echo '<li>' . __('Vá em "Certificados e segredos" → "Novo segredo do cliente", copie o VALOR gerado (não o ID do segredo) e cole no campo "Client secret" abaixo.', 'entrasso') . '</li>';
-echo '</ol>';
-
-echo '<a class="btn btn-primary" target="_blank" rel="noopener" ' .
-    'href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade">';
-echo '<i class="ti ti-external-link"></i> ' . __('Abrir Portal do Azure', 'entrasso');
-echo '</a>';
-echo '<div class="form-text mt-1">' .
-    __('Se o link não abrir a tela certa: portal.azure.com → Microsoft Entra ID → Registros de aplicativo → Novo registro.', 'entrasso') .
-    '</div>';
-
-echo '</div>';
-echo '</div>';
-
-$copied_label = addslashes(__('Copiado!', 'entrasso'));
-echo Html::scriptBlock(<<<JS
-    document.querySelectorAll('.entrasso-copy-btn').forEach(function(btn) {
-        const original = btn.innerHTML;
-        btn.addEventListener('click', function() {
-            const text = document.getElementById(btn.dataset.target).textContent;
-            navigator.clipboard.writeText(text).then(function() {
-                btn.innerHTML = '<i class="ti ti-check"></i> {$copied_label}';
-                setTimeout(function() { btn.innerHTML = original; }, 1500);
-            });
-        });
-    });
-JS);
-
-echo '<form method="post" action="' . $CFG_GLPI['root_doc'] . '/plugins/entrasso/front/config.php" class="card m-3">';
-echo '<div class="card-body">';
-echo '<h3>' . __('Login SSO via Microsoft Entra ID', 'entrasso') . '</h3>';
+echo '<form method="post" action="' . Ui::e($self_url) . '">';
 echo Html::hidden('_glpi_csrf_token', ['value' => Session::getNewCSRFToken()]);
 
-if (!str_starts_with($redirect_uri, 'https://')) {
-    echo '<div class="alert alert-danger">' .
-        __('Atenção: a URL base do GLPI não usa HTTPS. O Azure recusa redirect URIs HTTP fora de localhost.', 'entrasso') .
-        '</div>';
+$status_cards = [
+    Ui::card('ti-power', __('Login Microsoft', 'entrasso'), Ui::switch(
+        'is_active',
+        $is_active,
+        __('Mostrar "Entrar com Microsoft" na tela de login', 'entrasso'),
+        __('Botão de emergência: desligado, o SSO para na hora, sem desinstalar o plugin.', 'entrasso')
+    )),
+    Ui::card('ti-app-window', __('Aplicativo no Azure', 'entrasso'), Ui::kv([
+        __('Situação', 'entrasso')     => $is_configured
+            ? Ui::status('ok', __('Configurado', 'entrasso'))
+            : Ui::status('warn', __('Incompleto', 'entrasso')),
+        __('Client ID', 'entrasso')    => $config['client_id'] !== '' ? '<code>' . Ui::e($config['client_id']) . '</code>' : '<span class="text-muted">-</span>',
+        __('Tenant ID', 'entrasso')    => $config['tenant_id'] !== '' ? '<code>' . Ui::e($config['tenant_id']) . '</code>' : '<span class="text-muted">-</span>',
+        __('Client secret', 'entrasso') => $config['client_secret'] !== ''
+            ? Ui::status('ok', __('Salvo (criptografado)', 'entrasso'))
+            : Ui::status('warn', __('Não informado', 'entrasso')),
+    ]), __('Preencha os dados do aplicativo na seção "Credenciais do aplicativo".', 'entrasso')),
+    Ui::card('ti-lock', __('Endereço do GLPI', 'entrasso'), $is_https
+        ? Ui::callout('ok', 'ti-circle-check', Ui::e(__('O GLPI usa HTTPS, como o Azure exige.', 'entrasso')))
+        : Ui::callout('danger', 'ti-alert-triangle', Ui::e(__('A URL base do GLPI não usa HTTPS. O Azure recusa URIs de redirecionamento HTTP fora de localhost: ajuste em Configurar > Geral > URL da aplicação.', 'entrasso')))),
+];
+echo Ui::section('ti-activity', 'blue', __('Visão geral', 'entrasso'), __('Situação atual do login com Microsoft', 'entrasso'), Ui::row($status_cards, 3), '', false);
+
+// ---------------------------------------------------------------------------
+// Azure app registration guide
+// ---------------------------------------------------------------------------
+
+$steps = [
+    Ui::e(__('Abra o Portal do Azure, logado como Administrador Global do tenant, e clique em "Novo registro".', 'entrasso'))
+        . '<div><a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade">'
+        . '<i class="ti ti-external-link"></i> ' . Ui::e(__('Abrir Portal do Azure', 'entrasso')) . '</a></div>'
+        . '<div class="form-text m-0">' . Ui::e(__('Se o link não abrir a tela certa: portal.azure.com > Microsoft Entra ID > Registros de aplicativo > Novo registro.', 'entrasso')) . '</div>',
+    Ui::e(__('Em "Nome", cole:', 'entrasso')) . Ui::copy($app_name, 'entrasso-app-name'),
+    Ui::e(__('Em "Tipos de conta com suporte", escolha "Somente contas neste diretório organizacional" (single-tenant).', 'entrasso')),
+    Ui::e(__('Em "URI de redirecionamento", escolha o tipo "Web" e cole:', 'entrasso')) . Ui::copy($redirect_uri, 'entrasso-redirect-uri'),
+    Ui::e(__('Clique em "Registrar". Na visão geral do aplicativo, copie o "Application (client) ID" e o "Directory (tenant) ID" para a seção abaixo.', 'entrasso')),
+    Ui::e(__('Em "Certificados e segredos" > "Novo segredo do cliente", copie o VALOR gerado (não o ID do segredo) para o campo "Client secret".', 'entrasso')),
+];
+$guide = '<ol class="ent-steps">';
+foreach ($steps as $step) {
+    $guide .= '<li>' . $step . '</li>';
 }
+$guide .= '</ol>';
+echo Ui::section(
+    'ti-cloud-cog',
+    'orange',
+    __('Registrar o aplicativo no Microsoft 365', 'entrasso'),
+    __('Passo a passo no Portal do Azure, com os valores prontos para copiar', 'entrasso'),
+    Ui::card('', '', $guide, '', 'ent-card--flat'),
+    $is_configured ? Ui::status('ok', __('Concluído', 'entrasso')) : ''
+);
 
-echo '<table class="table">';
+// ---------------------------------------------------------------------------
+// Credentials
+// ---------------------------------------------------------------------------
 
-echo '<tr><td>' . __('Ativo', 'entrasso') . '</td><td>';
-Dropdown::showYesNo('is_active', $config['is_active']);
-echo '</td></tr>';
+$secret_placeholder = $config['client_secret'] !== '' ? __('•••••••• (deixe em branco para manter o atual)', 'entrasso') : '';
+echo Ui::section('ti-key', 'purple', __('Credenciais do aplicativo', 'entrasso'), __('Dados do aplicativo registrado no Azure', 'entrasso'), Ui::row([
+    Ui::card('ti-id', __('Identificação', 'entrasso'),
+        Ui::control('client_id', __('Application (client) ID', 'entrasso'), Ui::input('client_id', $config['client_id'], ['autocomplete' => 'off', 'spellcheck' => 'false']))
+        . Ui::control('tenant_id', __('Directory (tenant) ID', 'entrasso'), Ui::input('tenant_id', $config['tenant_id'], ['autocomplete' => 'off', 'spellcheck' => 'false']), '', __('Informe o GUID do tenant específico. Nunca use "common" ou "organizations".', 'entrasso'))),
+    Ui::card('ti-shield-lock', __('Segredo e botão', 'entrasso'),
+        Ui::control('client_secret', __('Client secret', 'entrasso'), '<input type="password" class="form-control" id="client_secret" name="client_secret" autocomplete="new-password" placeholder="' . Ui::e($secret_placeholder) . '">', __('Guardado criptografado pelo GLPI. O campo aparece sempre vazio: só digite para trocar.', 'entrasso'))
+        . Ui::control('button_label', __('Texto do botão de login', 'entrasso'), Ui::input('button_label', $config['button_label'], ['placeholder' => 'Entrar com Microsoft']))),
+]));
 
-echo '<tr><td>' . __('Application (client) ID', 'entrasso') . '</td><td>';
-echo Html::input('client_id', ['value' => $config['client_id'], 'size' => 50]);
-echo '</td></tr>';
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
 
-echo '<tr><td>' . __('Client secret', 'entrasso') . '</td><td>';
-echo '<input type="password" name="client_secret" class="form-control" style="max-width:400px" autocomplete="new-password" placeholder="' .
-    ($config['client_secret'] !== '' ? __('•••••••• (mantenha em branco para não alterar)', 'entrasso') : '') . '">';
-echo '</td></tr>';
+echo Ui::section('ti-users', 'teal', __('Usuários', 'entrasso'), __('Como a conta Microsoft é ligada a um usuário do GLPI no primeiro login', 'entrasso'), Ui::row([
+    Ui::card('ti-link', __('Vínculo e criação', 'entrasso'),
+        Ui::switch('match_existing_by_email', (bool) $config['match_existing_by_email'], __('Vincular a um usuário já existente pelo e-mail', 'entrasso'), __('Se o e-mail da conta Microsoft bater com exatamente 1 usuário cadastrado (local ou LDAP), vincula em vez de duplicar.', 'entrasso'))
+        . Ui::switch('auto_create', (bool) $config['auto_create'], __('Criar um usuário novo quando não encontrar nenhum', 'entrasso'))),
+    Ui::card('ti-building', __('Padrões dos usuários criados', 'entrasso'),
+        Ui::control('dropdown_entities_id_default', __('Entidade', 'entrasso'), Entity::dropdown(['name' => 'entities_id_default', 'value' => $config['entities_id_default'], 'display' => false, 'width' => '100%']))
+        . Ui::control('dropdown_profiles_id_default', __('Perfil', 'entrasso'), Profile::dropdown(['name' => 'profiles_id_default', 'value' => $config['profiles_id_default'], 'display' => false, 'width' => '100%']), '', __('Sugestão: "Self-Service".', 'entrasso'))),
+]));
 
-echo '<tr><td>' . __('Directory (tenant) ID', 'entrasso') . '</td><td>';
-echo Html::input('tenant_id', ['value' => $config['tenant_id'], 'size' => 50]);
-echo '<div class="form-text">' . __('Nunca use "common"/"organizations" - informe o GUID do tenant específico.', 'entrasso') . '</div>';
-echo '</td></tr>';
+// ---------------------------------------------------------------------------
+// Profile sync
+// ---------------------------------------------------------------------------
 
-echo '<tr><td>' . __('Texto do botão de login', 'entrasso') . '</td><td>';
-echo Html::input('button_label', ['value' => $config['button_label'], 'size' => 50]);
-echo '</td></tr>';
+echo Ui::section('ti-refresh', 'green', __('Sincronização de perfil', 'entrasso'), __('Dados trazidos do Microsoft Graph a cada login', 'entrasso'), Ui::card('ti-user-check', '',
+    Ui::switch('sync_profile_on_login', (bool) $config['sync_profile_on_login'], __('Preencher automaticamente nome, e-mail, telefone/celular, foto, cargo e localidade', 'entrasso'), __('Atualiza esses campos a cada login com o que estiver no perfil Microsoft 365 da pessoa, inclusive sobrescrevendo edições manuais feitas no GLPI.', 'entrasso'))
+    . Ui::callout('info', 'ti-info-circle', Ui::e(__('Cargo e Localidade são criados automaticamente se ainda não existirem, como na sincronização LDAP. Usa a permissão "User.Read" do Microsoft Graph, já habilitada por padrão em qualquer aplicativo registrado.', 'entrasso'))),
+    '', 'ent-card--flat'));
 
-echo '</table>';
+echo Ui::savebar('<button type="submit" name="update" value="1" class="btn btn-primary"><i class="ti ti-device-floppy"></i> ' . Ui::e(_sx('button', 'Save')) . '</button>');
 
-echo '<h4 class="mt-3">' . __('Criação automática de usuário', 'entrasso') . '</h4>';
-echo '<table class="table">';
-
-echo '<tr><td>' . __('Vincular a um usuário já existente pelo e-mail', 'entrasso') . '</td><td>';
-Dropdown::showYesNo('match_existing_by_email', $config['match_existing_by_email']);
-echo '<div class="form-text">' .
-    __('Se o e-mail da conta Microsoft bater com exatamente 1 usuário já cadastrado (local ou LDAP), vincula em vez de duplicar.', 'entrasso') .
-    '</div>';
-echo '</td></tr>';
-
-echo '<tr><td>' . __('Criar usuário novo se não encontrar nenhum', 'entrasso') . '</td><td>';
-Dropdown::showYesNo('auto_create', $config['auto_create']);
-echo '</td></tr>';
-
-echo '<tr><td>' . __('Entidade padrão para usuários criados', 'entrasso') . '</td><td>';
-Entity::dropdown(['name' => 'entities_id_default', 'value' => $config['entities_id_default']]);
-echo '</td></tr>';
-
-echo '<tr><td>' . __('Perfil padrão para usuários criados', 'entrasso') . '</td><td>';
-Profile::dropdown(['name' => 'profiles_id_default', 'value' => $config['profiles_id_default']]);
-echo '<div class="form-text">' . __('Sugestão: "Self-Service".', 'entrasso') . '</div>';
-echo '</td></tr>';
-
-echo '</table>';
-
-echo '<h4 class="mt-3">' . __('Sincronização de perfil (Microsoft Graph)', 'entrasso') . '</h4>';
-echo '<table class="table">';
-
-echo '<tr><td>' . __('Preencher automaticamente nome, e-mail, telefone/celular, foto, cargo e localidade', 'entrasso') . '</td><td>';
-Dropdown::showYesNo('sync_profile_on_login', $config['sync_profile_on_login']);
-echo '<div class="form-text">' .
-    __('Atualiza esses campos a cada login com o que estiver no perfil Microsoft 365 da pessoa - inclusive sobrescrevendo edições manuais feitas no GLPI. Cargo e Localidade são criados automaticamente se ainda não existirem (igual à sincronização LDAP). Usa a permissão "User.Read" do Microsoft Graph, já habilitada por padrão em qualquer app registrado.', 'entrasso') .
-    '</div>';
-echo '</td></tr>';
-
-echo '</table>';
-
-echo '<h4 class="mt-3">' . __('Licenciamento', 'entrasso') . '</h4>';
-echo '<table class="table">';
-
-echo '<tr><td>' . __('Chave da licença', 'entrasso') . '</td><td>';
-echo Html::input('license_key', ['value' => $config['license_key'], 'size' => 50]);
-echo '</td></tr>';
-
-if ($config['license_instance_id'] !== '') {
-    echo '<tr><td>' . __('Identificador desta instalação', 'entrasso') . '</td><td>';
-    echo entrasso_copy_field('entrasso-instance-id', $config['license_instance_id']);
-    echo '<div class="form-text">' . __('Gerado automaticamente no primeiro check-in. É o que o painel conta contra a quantidade contratada - não muda depois.', 'entrasso') . '</div>';
-    echo '</td></tr>';
-}
-
-echo '<tr><td>' . __('Última verificação', 'entrasso') . '</td><td>';
-if ($config['license_last_checked_at'] !== '') {
-    $status_labels = [
-        'ok' => '<span class="badge bg-success">' . __('OK', 'entrasso') . '</span>',
-        'unreachable' => '<span class="badge bg-warning">' . __('Painel inacessível', 'entrasso') . '</span>',
-        'error' => '<span class="badge bg-warning">' . __('Erro na verificação', 'entrasso') . '</span>',
-    ];
-    echo $status_labels[$config['license_last_status']] ?? ('<span class="badge bg-danger">' . htmlspecialchars($config['license_last_status']) . '</span>');
-    echo ' - ' . Html::convDateTime($config['license_last_checked_at']);
-} else {
-    echo '<span class="text-muted">' . __('Ainda não verificado', 'entrasso') . '</span>';
-}
-echo '<div class="form-text">' . __('Verificado automaticamente a cada 10 minutos (tarefa agendada "CheckIn"). Uma recusa definitiva do painel (chave inválida, expirada, suspensa ou limite de instalações atingido) desativa o login Microsoft automaticamente até ser resolvido - problemas de rede não desativam.', 'entrasso') . '</div>';
-echo '</td></tr>';
-
-echo '</table>';
-
-echo '<div class="mt-3">' . Html::submit(_sx('button', 'Save'), ['name' => 'update']) . '</div>';
-
-echo '</div>';
 echo '</form>';
+echo Ui::pageEnd();
+echo Ui::copyScript();
 
 Html::footer();
