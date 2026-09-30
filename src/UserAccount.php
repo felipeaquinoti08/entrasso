@@ -48,33 +48,30 @@ class UserAccount extends CommonDBTM
 
         $account = self::getForUser((int) $item->getID());
 
-        echo '<div class="card m-3">';
-        echo '<div class="card-body">';
+        echo Ui::styles();
+        echo '<div class="ent-page m-3">';
 
         if ($account === null) {
-            echo '<p class="text-muted mb-0">' .
-                __('Esta conta não está vinculada a nenhuma identidade Microsoft Entra ID.', 'entrasso') .
-                '</p>';
+            echo Ui::section('ti-brand-windows', 'blue', self::getTypeName(1), '', Ui::empty(
+                'ti-link-off',
+                __('Esta conta não está vinculada a nenhuma identidade Microsoft Entra ID.', 'entrasso')
+            ), Ui::status('off', __('Não vinculada', 'entrasso')), false);
         } else {
-            echo '<dl class="row mb-0">';
-            echo '<dt class="col-3">' . __('Tenant', 'entrasso') . '</dt>';
-            echo '<dd class="col-9">' . htmlspecialchars($account->fields['entra_tenant_id']) . '</dd>';
-            echo '<dt class="col-3">' . __('Object ID (oid)', 'entrasso') . '</dt>';
-            echo '<dd class="col-9">' . htmlspecialchars($account->fields['entra_oid']) . '</dd>';
-            echo '<dt class="col-3">' . __('UPN', 'entrasso') . '</dt>';
-            echo '<dd class="col-9">' . htmlspecialchars($account->fields['entra_upn']) . '</dd>';
-            echo '<dt class="col-3">' . _n('Email', 'Emails', 1) . '</dt>';
-            echo '<dd class="col-9">' . htmlspecialchars($account->fields['entra_email'] ?? '') . '</dd>';
-            echo '<dt class="col-3">' . __('Vinculado desde', 'entrasso') . '</dt>';
-            echo '<dd class="col-9">' . htmlspecialchars(Html::convDateTime($account->fields['date_creation'])) . '</dd>';
-            echo '<dt class="col-3">' . __('Último login via Microsoft', 'entrasso') . '</dt>';
-            echo '<dd class="col-9">' .
-                ($account->fields['last_login'] ? htmlspecialchars(Html::convDateTime($account->fields['last_login'])) : '-') .
-                '</dd>';
-            echo '</dl>';
+            $fields = $account->fields;
+            echo Ui::section('ti-brand-windows', 'blue', self::getTypeName(1), __('Identidade Microsoft Entra ID ligada a este usuário', 'entrasso'), Ui::row([
+                Ui::card('ti-id-badge', __('Identidade', 'entrasso'), Ui::kv([
+                    __('UPN', 'entrasso')             => Ui::e($fields['entra_upn']),
+                    _n('Email', 'Emails', 1)          => $fields['entra_email'] ? Ui::e($fields['entra_email']) : '<span class="text-muted">-</span>',
+                    __('Object ID (oid)', 'entrasso') => '<code>' . Ui::e($fields['entra_oid']) . '</code>',
+                    __('Tenant', 'entrasso')          => '<code>' . Ui::e($fields['entra_tenant_id']) . '</code>',
+                ])),
+                Ui::card('ti-clock', __('Histórico', 'entrasso'), Ui::kv([
+                    __('Vinculado desde', 'entrasso')            => Ui::e(Html::convDateTime($fields['date_creation'])),
+                    __('Último login via Microsoft', 'entrasso') => $fields['last_login'] ? Ui::e(Html::convDateTime($fields['last_login'])) : '<span class="text-muted">-</span>',
+                ])),
+            ]), Ui::status('ok', __('Vinculada', 'entrasso')), false);
         }
 
-        echo '</div>';
         echo '</div>';
 
         return true;

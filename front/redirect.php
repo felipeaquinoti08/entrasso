@@ -1,19 +1,7 @@
 <?php
 
 use GlpiPlugin\Entrasso\Config;
-use GlpiPlugin\Entrasso\LicenseCheck;
 use GlpiPlugin\Entrasso\OAuthClient;
-
-// Re-validate the license synchronously on every login attempt (short
-// timeout, best-effort) instead of relying solely on the 10-minute cron
-// cycle - a license change on the panel (cancelled, quantity lowered...)
-// then takes effect immediately instead of up to 10 minutes later. If the
-// panel can't be reached in time this is a no-op: Config::isActive()
-// below falls back to the last known state from the cron job.
-$licenseConfig = Config::get();
-if ($licenseConfig['license_api_url'] !== '' && $licenseConfig['license_key'] !== '') {
-    LicenseCheck::checkIn(5);
-}
 
 if (!Config::isActive()) {
     throw new \Glpi\Exception\Http\NotFoundHttpException();

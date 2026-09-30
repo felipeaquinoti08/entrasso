@@ -30,15 +30,24 @@ function plugin_entrasso_install_run(): bool
 
     $migration->executeMigration();
 
-    CronTask::register(
-        \GlpiPlugin\Entrasso\LicenseCheck::class,
-        'CheckIn',
-        10 * MINUTE_TIMESTAMP,
-        [
-            'comment' => 'Valida a licença do Entrasso junto ao painel de licenciamento.',
-            'mode' => CronTask::MODE_EXTERNAL,
-        ]
-    );
+    plugin_entrasso_remove_licensing();
 
     return true;
+}
+
+/**
+ * Up to 1.0.x the plugin required a license: a "CheckIn" cron task
+ * validated it every 10 minutes and its state lived in glpi_configs.
+ * Entrasso is free since 1.1.0 - drop both on update (the cron task class
+ * no longer exists, so leaving it would make the cron fail every run).
+ */
+function plugin_entrasso_remove_licensing(): void
+{
+    global $DB;
+
+    $DB->delete('glpi_crontasks', ['itemtype' => 'GlpiPlugin\\Entrasso\\LicenseCheck']);
+    $DB->delete('glpi_configs', [
+        'context' => \GlpiPlugin\Entrasso\Config::CONTEXT,
+        'name'    => \GlpiPlugin\Entrasso\Config::LEGACY_FIELDS,
+    ]);
 }

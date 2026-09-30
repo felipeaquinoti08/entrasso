@@ -29,8 +29,14 @@ function entrasso_login_error(string $message): never
 {
     global $CFG_GLPI;
     Html::nullHeader(__('Entrar com Microsoft', 'entrasso'));
-    echo '<div class="alert alert-danger m-3">' . htmlspecialchars($message) . '</div>';
-    echo '<div class="m-3"><a href="' . $CFG_GLPI['root_doc'] . '/">' . __('Voltar para o login') . '</a></div>';
+    echo \GlpiPlugin\Entrasso\Ui::styles();
+    echo '<div class="ent-page ent-page--narrow" style="max-width:520px;padding-top:12vh">';
+    echo '<div class="ent-card" style="text-align:center;justify-items:center;padding:32px 28px">';
+    echo '<span class="ent-intro__icon" style="background:color-mix(in srgb,#ef4444 14%,transparent);color:#ef4444"><i class="ti ti-alert-triangle"></i></span>';
+    echo '<h2 class="m-0" style="font-size:1.2rem">' . __('Não foi possível entrar com Microsoft', 'entrasso') . '</h2>';
+    echo '<p class="text-muted m-0">' . htmlspecialchars($message) . '</p>';
+    echo '<a class="btn btn-primary" href="' . htmlspecialchars($CFG_GLPI['root_doc'] . '/') . '"><i class="ti ti-arrow-left"></i> ' . __('Voltar para o login', 'entrasso') . '</a>';
+    echo '</div></div>';
     Html::nullFooter();
     exit;
 }
