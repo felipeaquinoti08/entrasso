@@ -244,7 +244,10 @@ Sugestões, relatos de problemas e pull requests são bem-vindos.
 ### Outros plugins gratuitos do mesmo autor
 
 - [GLPI Style](https://github.com/felipeaquinoti08/glpi_style): tela de login premium, logos, cores e visual interno moderno para o GLPI. O botão do Entrasso se integra à tela de login dele.
-- [Termodocs](https://github.com/felipeaquinoti08/termodoc): termos de entrega e devolução de equipamentos com assinatura eletrônica.
+- [Termodocs](https://github.com/felipeaquinoti08/termodoc): termos de entrega e devolução de equipamentos com assinatura eletrônica, lembretes por e-mail e link seguro para quem não entra no GLPI.
+- [Sentinela](https://github.com/felipeaquinoti08/sentinela): auditoria de softwares instalados, com políticas de lista branca e lista negra e alertas por e-mail.
+
+Todos são gratuitos e distribuídos sob a mesma licença (GPL-3.0-or-later).
 
 ---
 
